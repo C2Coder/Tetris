@@ -4,6 +4,9 @@
 #include "utils.hpp"
 
 #include <array>
+#include "colors.hpp"
+
+extern std::array< Rgb, 8 > colors;
 
 class Map {
 public:
@@ -13,23 +16,8 @@ public:
     void draw() {
         for (int x = 0; x < 10; x++) {
             for (int y = 0; y < 10; y++) {
-                if (placedPixels[x][y] == 1) {
-                    display.setColor(x, y, Rgb(0, 255, 255));
-                } else if (placedPixels[x][y] == 2) {
-                    display.setColor(x, y, Rgb(0, 0, 255));
-                } else if (placedPixels[x][y] == 3) {
-                    display.setColor(x, y, Rgb(255, 128, 0));
-                } else if (placedPixels[x][y] == 4) {
-                    display.setColor(x, y, Rgb(255, 255, 0));
-                } else if (placedPixels[x][y] == 5) {
-                    display.setColor(x, y, Rgb(255, 0, 0));
-                } else if (placedPixels[x][y] == 6) {
-                    display.setColor(x, y, Rgb(0, 255, 0));
-                } else if (placedPixels[x][y] == 7) {
-                    display.setColor(x, y, Rgb(255, 0, 255));
-                } else {
-                    //debug
-                    //display.setColor(x, y, Rgb(0, 125, 0));
+                if (placedPixels[x][y] != 0){
+                    display.setColor(x, y, colors[placedPixels[x][y] + 1]);
                 }
             }
         }

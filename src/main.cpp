@@ -1,12 +1,16 @@
 #include <Logic.hpp>
 #include <iostream>
 #include <memory>
+#include <array>
 
 #include "map.hpp"
 #include "piece.hpp"
+#include "colors.hpp"
 
 Map map;
 std::unique_ptr<Piece> activePiece; // needs the ability to be null
+
+extern std::array< Rgb, 8 > colors;
 
 long current_millis = 0;
 long prev_millis = 0;
@@ -14,10 +18,11 @@ long interval = 750; // 750
 
 bool GameOverBool = false;
 
-//original
+// original
 PieceKind pieceKind = Square;
 
-void GameOver() {
+void GameOver()
+{
     for (int x = 0; x < 10; x++) {
         for (int y = 0; y < 10; y++) {
             map.placedPixels[x][y] = 0;
@@ -26,12 +31,14 @@ void GameOver() {
 
     delay(50);
     display.clear();
-    display.fill(Rgb(50, 50, 50));
+    display.fill(colors[1]);
     display.show();
 }
 
-void displayFrame() {
-    if (!GameOverBool) {
+void displayFrame()
+{
+    if (!GameOverBool)
+    {
         map.draw();
         activePiece->draw();
 
@@ -40,71 +47,96 @@ void displayFrame() {
     }
 }
 
-void newPiece() {
-    if (activePiece) {
-        map << *activePiece; // merge
-        map.checkLines();
-    }
+void newPiece()
+{
+    if (!GameOverBool)
+    {
+        if (activePiece)
+        {
+            map << *activePiece; // merge
+            map.checkLines();
+        }
 
-    pieceKind = static_cast<PieceKind>(random(0, 7));
+        pieceKind = static_cast<PieceKind>(random(0, 7));
 
-    if (pieceKind >= 7) {
-        pieceKind = Square;
-    }
-    if (pieceKind <= -1) {
-        pieceKind = T;
-    }
+        if (pieceKind > 6)
+        {
+            pieceKind = Square;
+        }
+        if (pieceKind < 0)
+        {
+            pieceKind = T;
+        }
 
-    activePiece = std::make_unique<Piece>(pieceKind, Vec2 { 4, 0 }, 1); // create a new piece
+        activePiece = std::make_unique<Piece>(pieceKind, Vec2{4, 0}, 1); // create a new piece
+    }
 }
 
-void test() {
+void test()
+{
     bool fail = false;
     bool hitBottom = false;
 
-    for (int i = 0; i < 10; i++) {
-        if (map.placedPixels[i][2] != 0) {
+    for (int i = 0; i < 10; i++)
+    {
+        if (map.placedPixels[i][2] != 0)
+        {
             GameOverBool = true;
             GameOver();
         }
     }
 
-    std::vector<PiecePixel> pixels {};
-    activePiece->getShape(pixels);
+    if (!GameOverBool)
+    {
 
-    for (auto& p : pixels) {
-        // Left
-        if (p.pos.x <= -1) {
-            fail = true;
+        std::vector<PiecePixel> pixels{};
+        activePiece->getShape(pixels);
+
+        for (auto &p : pixels)
+        {
+            // Left
+            if (p.pos.x <= -1)
+            {
+                fail = true;
+            }
+
+            // Right
+            if (p.pos.x >= 10)
+            {
+                fail = true;
+            }
+
+            // Down
+            if (p.pos.y >= 10)
+            {
+                hitBottom = true;
+            }
         }
 
-        // Right
-        if (p.pos.x >= 10) {
-            fail = true;
+        if ((fail == true && hitBottom == false) || (map.checkCollision(*activePiece) && !activePiece->getInteract()))
+        {
+            activePiece->undo();
         }
-
-        // Down
-        if (p.pos.y >= 10) {
-            hitBottom = true;
+        else if ((fail == false && hitBottom == true) || (map.checkCollision(*activePiece) && activePiece->getInteract()))
+        {
+            activePiece->undo();
+            interval = 750;
+            newPiece();
         }
-    }
+        else
+        {
 
-    if ((fail == true && hitBottom == false) || (map.checkCollision(*activePiece) && !activePiece->getInteract())) {
-        activePiece->undo();
-    } else if ((fail == false && hitBottom == true) || (map.checkCollision(*activePiece) && activePiece->getInteract())) {
-        activePiece->undo();
-        interval = 750;
-        newPiece();
-    } else {
-
-        activePiece->confirm();
+            activePiece->confirm();
+        }
     }
 }
 
-void loop() {
+void loop()
+{
 
     current_millis = millis();
-    if (current_millis - prev_millis >= interval) {
+    if (current_millis - prev_millis >= interval)
+    {
         activePiece->lower();
         prev_millis = current_millis;
     }
@@ -113,27 +145,36 @@ void loop() {
     displayFrame();
 }
 
-void logicMain() {
-    buttons.onPress([]() { activePiece->rotateCounterClockwise(); activePiece->interact(); },
-        RightDown);
-    buttons.onPress([]() { activePiece->rotateClockwise(); activePiece->interact(); },
-        LeftDown);
+void logicMain()
+{
+    buttons.onPress([]()
+                    { activePiece->rotateCounterClockwise(); activePiece->interact(); },
+                    RightDown);
+    buttons.onPress([]()
+                    { activePiece->rotateClockwise(); activePiece->interact(); },
+                    LeftDown);
 
-    buttons.onPress([]() { activePiece->position.x++; activePiece->interact(); },
-        Right);
-    buttons.onPress([]() { activePiece->position.x--; activePiece->interact(); },
-        Left);
+    buttons.onPress([]()
+                    { activePiece->position.x++; activePiece->interact(); },
+                    Right);
+    buttons.onPress([]()
+                    { activePiece->position.x--; activePiece->interact(); },
+                    Left);
 
-    buttons.onPress([]() { interval = 100; },
-        Down);
-    buttons.onRelease([]() { interval = 750; },
-        Down);
+    buttons.onPress([]()
+                    { interval = 100; },
+                    Down);
+    buttons.onRelease([]()
+                      { interval = 750; },
+                      Down);
 
-    buttons.onPress([]() { esp_restart();},
-        RightUp);
+    buttons.onPress([]()
+                    { esp_restart(); },
+                    RightUp);
 
     newPiece();
-    while (!GameOverBool) {
+    while (!GameOverBool)
+    {
         loop();
     }
 }
