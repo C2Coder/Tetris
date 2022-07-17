@@ -10,7 +10,10 @@
 Map map;
 std::unique_ptr<Piece> activePiece; // needs the ability to be null
 
-extern std::array< Rgb, 8 > colors;
+bool gameStarted = false;
+
+extern std::array<Rgb, 8> colors;
+int brightness = 50;
 
 long current_millis = 0;
 long prev_millis = 0;
@@ -23,16 +26,15 @@ PieceKind pieceKind = Square;
 
 void GameOver()
 {
-    for (int x = 0; x < 10; x++) {
-        for (int y = 0; y < 10; y++) {
-            map.placedPixels[x][y] = 0;
+    for (int x = 0; x < 10; x++)
+    {
+        for (int y = 0; y < 10; y++)
+        {
+
+            display.setColor(x, y, colors[map.placedPixels[x][y]]);
         }
     }
-
-    delay(50);
-    display.clear();
-    display.fill(colors[1]);
-    display.show();
+    display.show(brightness);
 }
 
 void displayFrame()
@@ -42,7 +44,7 @@ void displayFrame()
         map.draw();
         activePiece->draw();
 
-        display.show(50);
+        display.show(brightness);
         display.clear();
     }
 }
@@ -77,7 +79,7 @@ void test()
     bool fail = false;
     bool hitBottom = false;
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 2; i < 8; i++)
     {
         if (map.placedPixels[i][2] != 0)
         {
@@ -141,8 +143,12 @@ void loop()
         prev_millis = current_millis;
     }
 
+    // if (gameStarted)
+    //{
+
     test();
     displayFrame();
+    //}
 }
 
 void logicMain()
