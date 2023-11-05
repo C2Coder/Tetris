@@ -1,186 +1,257 @@
 #include <Logic.hpp>
+#include <array>
 #include <iostream>
 #include <memory>
-#include <array>
 
+#include "colors.hpp"
 #include "map.hpp"
 #include "piece.hpp"
-#include "colors.hpp"
+#include "tetris_config.hpp"
 
 Map map;
 std::unique_ptr<Piece> activePiece; // needs the ability to be null
 
-bool gameStarted = false;
-
 extern std::array<Rgb, 8> colors;
-int brightness = 50;
+extern std::array<Rgb, 10> number_colors;
+
+int brightness = 15;
 
 long current_millis = 0;
 long prev_millis = 0;
 long interval = 750; // 750
 
 bool GameOverBool = false;
+bool ShouldRunGame = true;
 
-// original
-PieceKind pieceKind = Square;
+int view_offset = 0;
 
-void GameOver()
-{
-    for (int x = 0; x < 10; x++)
-    {
-        for (int y = 0; y < 10; y++)
-        {
+const int GeneratorBagSize = 7;
+int GeneratorPieceIndex = 0;
+int GeneratorPieceList[GeneratorBagSize];
 
+int player_score = 0;
+
+void GameOver() {
+    GameOverBool = true;
+
+    // show last frame
+    for (int x = 0; x < 10; x++) {
+        for (int y = 0; y < 10; y++) {
+            int p_x = x + view_offset;
+            while(p_x < 0){
+                p_x += _cfg_width;
+            }
+            while(p_x >= _cfg_width){
+                p_x -= _cfg_width;
+            }
             display.setColor(x, y, colors[map.placedPixels[x][y]]);
         }
     }
     display.show(brightness);
 }
 
-void displayFrame()
-{
-    if (!GameOverBool)
+void displayScore() {
+    if (player_score < 0) {
+        player_score = 0;
+    }
+    if (player_score > 10000) { // probably dont need this, but just to be safe
+        player_score = 0;
+    }
+
+    int score_digits[5] = {0, 0, 0, 0, 0};
+
+    score_digits[4] = player_score % 10;
+    score_digits[3] = (player_score / 10) % 10;
+    score_digits[2] = (player_score / 100) % 10;
+    score_digits[1] = (player_score / 1000) % 10;
+    score_digits[0] = (player_score / 10000) % 10;
+    for (int i = 0; i < 5; i++)
     {
-        map.draw();
-        activePiece->draw();
+        statusBar[i] = number_colors[score_digits[i]];
+    }
+
+    //std::cout << score_digits[0] << " "<< score_digits[1] << " "<< score_digits[2] << " "<< score_digits[3] << " "<< score_digits[4] << "\n";
+    
+    statusBar.show(brightness);
+}
+
+void displayFrame() {
+    if (!GameOverBool) {
+        map.draw(view_offset);
+        activePiece->draw(view_offset);
 
         display.show(brightness);
         display.clear();
     }
 }
 
-void newPiece()
-{
-    if (!GameOverBool)
-    {
-        if (activePiece)
-        {
-            map << *activePiece; // merge
-            map.checkLines();
-        }
-
-        pieceKind = static_cast<PieceKind>(random(0, 7));
-
-        if (pieceKind > 6)
-        {
-            pieceKind = Square;
-        }
-        if (pieceKind < 0)
-        {
-            pieceKind = T;
-        }
-
-        activePiece = std::make_unique<Piece>(pieceKind, Vec2{4, 0}, 1); // create a new piece
+void generatePieces() {
+    for (int i = 0; i < GeneratorBagSize; i++) {
+        GeneratorPieceList[i] = i;
     }
+
+    for (int i = GeneratorBagSize - 1; i > 0; i--) {
+        int j = random(0, i + 1);
+        int temp = GeneratorPieceList[i];
+        GeneratorPieceList[i] = GeneratorPieceList[j];
+        GeneratorPieceList[j] = temp;
+    }
+    //std::cout << GeneratorPieceList[0] << " " << GeneratorPieceList[1] << " " << GeneratorPieceList[2] << " " << GeneratorPieceList[3] << " " << GeneratorPieceList[4] << " " << GeneratorPieceList[5] << " " << GeneratorPieceList[6] << "\n";
 }
 
-void test()
-{
+void newPiece() {
+    GeneratorPieceIndex += 1;
+
+    if (GeneratorPieceIndex >= GeneratorBagSize) {
+        GeneratorPieceIndex = 0;
+        generatePieces();
+    }
+
+    //std::cout << GeneratorPieceList[GeneratorPieceIndex] << "\n";
+    PieceKind pieceKind = static_cast<PieceKind>(GeneratorPieceList[GeneratorPieceIndex]);
+
+    activePiece = std::make_unique<Piece>(pieceKind, Vec2 { 4 - view_offset, 0 }, 0); // create a new piece
+}
+
+void test() {
     bool fail = false;
     bool hitBottom = false;
 
-    for (int i = 2; i < 8; i++)
-    {
-        if (map.placedPixels[i][2] != 0)
-        {
-            GameOverBool = true;
-            GameOver();
-        }
-    }
+    std::vector<PiecePixel> pixels {};
+    activePiece->getShape(pixels);
 
-    if (!GameOverBool)
-    {
+    if (!_cfg_overflow_enabled) {
 
-        std::vector<PiecePixel> pixels{};
-        activePiece->getShape(pixels);
-
-        for (auto &p : pixels)
-        {
+        for (auto& p : pixels) {
             // Left
-            if (p.pos.x <= -1)
-            {
+            if (p.pos.x <= -1) {
                 fail = true;
             }
 
             // Right
-            if (p.pos.x >= 10)
-            {
+            if (p.pos.x >= 10) {
                 fail = true;
             }
-
-            // Down
-            if (p.pos.y >= 10)
-            {
-                hitBottom = true;
-            }
         }
+    }
 
-        if ((fail == true && hitBottom == false) || (map.checkCollision(*activePiece) && !activePiece->getInteract()))
-        {
-            activePiece->undo();
+    for (auto& p : pixels) {
+        // Down
+        if (p.pos.y >= 10) {
+            hitBottom = true;
         }
-        else if ((fail == false && hitBottom == true) || (map.checkCollision(*activePiece) && activePiece->getInteract()))
-        {
-            activePiece->undo();
-            interval = 750;
-            newPiece();
-        }
-        else
-        {
+    }
 
-            activePiece->confirm();
+    if ((fail == true && hitBottom == false) || (map.checkCollision(*activePiece) && !activePiece->getInteract())) {
+        activePiece->undo();
+    } else if ((fail == false && hitBottom == true) || (map.checkCollision(*activePiece) && activePiece->getInteract())) {
+        activePiece->undo();
+        interval = 750;
+        map << *activePiece; // merge
+        map.checkLines();
+        newPiece();
+    } else {
+
+        activePiece->confirm();
+    }
+
+    for (int i = 0; i < 10; i++) {
+        if (map.placedPixels[i][1] != 0) {
+            GameOver();
+        }
+        else if (map.placedPixels[i][0] != 0) {
+            GameOver();
         }
     }
 }
 
-void loop()
-{
-
+void loop() {
     current_millis = millis();
-    if (current_millis - prev_millis >= interval)
-    {
+    if (current_millis - prev_millis >= interval) {
         activePiece->lower();
         prev_millis = current_millis;
     }
 
-    // if (gameStarted)
-    //{
-
     test();
     displayFrame();
-    //}
+    if(map.full_lines > 0){
+        if (map.full_lines == 2 ){
+            player_score += 3;
+        }
+        else if (map.full_lines == 3 ){
+            player_score += 5;
+        }
+        else if (map.full_lines == 4 ){
+            player_score += 8;
+        }
+        else {
+            player_score += 1;
+        }
+        displayScore();
+        
+        map.full_lines = 0;
+    }
 }
 
-void logicMain()
-{
-    buttons.onPress([]()
-                    { activePiece->rotateCounterClockwise(); activePiece->interact(); },
-                    RightDown);
-    buttons.onPress([]()
-                    { activePiece->rotateClockwise(); activePiece->interact(); },
-                    LeftDown);
+void logicMain() {
 
-    buttons.onPress([]()
-                    { activePiece->position.x++; activePiece->interact(); },
-                    Right);
-    buttons.onPress([]()
-                    { activePiece->position.x--; activePiece->interact(); },
-                    Left);
+    // Button callbacks
+    
+    buttons.onPress([]() { activePiece->rotateClockwise(); activePiece->interact(); },
+        Up);
+    buttons.onPress([]() { activePiece->rotateClockwise(); activePiece->interact(); },
+        RightDown);
 
-    buttons.onPress([]()
-                    { interval = 100; },
-                    Down);
-    buttons.onRelease([]()
-                      { interval = 750; },
-                      Down);
+    buttons.onPress([]() { activePiece->position.x++; activePiece->interact(); },
+        Right);
+    buttons.onPress([]() { activePiece->position.x--; activePiece->interact(); },
+        Left);
 
-    buttons.onPress([]()
-                    { esp_restart(); },
-                    RightUp);
+    buttons.onPress([]() { interval = 100; },
+        Down);
+    buttons.onRelease([]() { interval = 750; },
+        Down);
+    buttons.onPress([]() { interval = 100; },
+        LeftDown);
+    buttons.onRelease([]() { interval = 750; },
+        LeftDown);
 
-    newPiece();
-    while (!GameOverBool)
-    {
-        loop();
+    buttons.onPress([]() { view_offset -= 1; if (view_offset < 0) view_offset += _cfg_width; },
+        LeftUp);
+    buttons.onPress([]() { view_offset += 1; if (view_offset >= _cfg_width) view_offset -= _cfg_width; },
+        RightUp);
+    /*
+    buttons.onPress([]() { brightness -= 5; if (brightness < 0) brightness = 0; },
+        LeftUp);
+    buttons.onPress([]() { brightness += 5; if (brightness > 255) brightness = 255; },
+        RightUp);
+    */
+
+    // buttons.onChange([]() { ShouldRunGame = true; });
+
+    while (true) {
+        // Setup functions
+        GameOverBool = false;
+
+        player_score = 1;
+        displayScore();
+
+        map.clearMap();
+        generatePieces();
+        newPiece();
+
+        // The loops
+        while (!GameOverBool) {
+            loop();
+        }
+
+        // If is game over
+        delay(500); // wait a bit for
+        ShouldRunGame = false;
+
+        // Wait until any button is pressed, then restart the loop
+        while (!ShouldRunGame) {
+            delay(100);
+        }
     }
 }

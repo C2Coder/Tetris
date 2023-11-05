@@ -1,23 +1,30 @@
 #pragma once
 
-#include "piece.hpp"
-#include "utils.hpp"
-
-#include <array>
 #include "colors.hpp"
+#include "piece.hpp"
+#include "tetris_config.hpp"
+#include "utils.hpp"
+#include <array>
 
-extern std::array< Rgb, 8 > colors;
+extern std::array<Rgb, 8> colors;
 
 class Map {
 public:
     Map() {}
     ~Map() {} // default constructors, creates empty map
 
-    void draw() {
+    void draw(int view_offset) {
         for (int x = 0; x < 10; x++) {
             for (int y = 0; y < 10; y++) {
-                if (placedPixels[x][y] != 0){
-                    display.setColor(x, y, colors[placedPixels[x][y]]);
+                if (placedPixels[x][y] != 0) {
+                    int p_x = x + view_offset;
+                    while (p_x < 0) {
+                        p_x += _cfg_width;
+                    }
+                    while (p_x >= _cfg_width) {
+                        p_x -= _cfg_width;
+                    }
+                    display.setColor(p_x, y, colors[placedPixels[x][y]]);
                 }
             }
         }
@@ -47,7 +54,7 @@ public:
     }
 
     void checkLines() {
-        for (int i = 2; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             bool full = true;
 
             for (int x = 0; x < 10; x++) {
@@ -57,6 +64,7 @@ public:
             }
 
             if (full) {
+                full_lines += 1;
                 moveLines(i);
             }
         }
@@ -67,10 +75,19 @@ public:
                 placedPixels[x][y] = placedPixels[x][y - 1];
             }
         }
-        printf("line\n");
+        //printf("line\n");
+    }
+
+    void clearMap() {
+        for (int y = 0; y < 10; y++) {
+            for (int x = 0; x < 10; x++) {
+                placedPixels[x][y] = 0;
+            }
+        }
     }
 
     char placedPixels[10][10];
+    int full_lines = 0;
 
 private:
 };

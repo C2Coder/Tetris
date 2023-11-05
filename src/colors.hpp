@@ -3,4 +3,5 @@
 #include <array>
 #include <Logic.hpp>
 extern std::array< Rgb, 8 > colors;
+extern std::array< Rgb, 10 > number_colors;
 #endif

@@ -26,16 +26,14 @@ public:
     void confirm();
     void undo();
 
-    void draw();
+    void draw(int view_offset);
 
     bool getInteract() const { return lowerLast; }
 
     void interact() { lowerLast = false; }
 
-    // TODO: test for overlap
-
     Vec2 position;
-    uint8_t rotation;
+    uint8_t rotation = 0;
 private:
     const PieceShape& loadPiece(PieceKind type);
     void renderShape(std::vector<PiecePixel>& pixels) const; // positions, rotates and converts shape to pixels
