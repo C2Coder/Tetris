@@ -87,7 +87,7 @@ public:
     }
     void lineAnimation(int row) {
         for (int o = 0; o < ((_cfg_width / 2) - 1); o++) {
-            int time = 35 - (o * 2);
+            int time = 50 - (o * 2);
             for (int i = o; i >= -1; i--) {
                 std::cout << i << "\n";
                 std::cout << (_cfg_width - i) - 1 << "\n";
