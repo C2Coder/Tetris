@@ -1,6 +1,7 @@
 #include "piece.hpp"
 #include "colors.hpp"
 #include "tetris_config.hpp"
+#include "global_vars.hpp"
 #include <vector>
 
 Piece::Piece(PieceKind type, Vec2 pos, const uint8_t& rot)
@@ -42,18 +43,27 @@ void Piece::undo() {
     rotation = lastRotation;
 }
 
-void Piece::draw(int view_offset) {
+void Piece::draw() {
     std::vector<PiecePixel> pixels;
     renderShape(pixels);
 
     for (auto& p : pixels) {
         if (p.value != 0) {
             int p_x = p.pos.x + view_offset;
-            while(p_x < 0){
-                p_x += _cfg_width;
-            }
-            while(p_x >= _cfg_width){
-                p_x -= _cfg_width;
+            if (_cfg_overflow_enable == true || _cfg_scroll_enable == true) {
+                while (p_x < 0) {
+                    p_x += _cfg_width;
+                }
+                while (p_x >= _cfg_width) {
+                    p_x -= _cfg_width;
+                }
+            } else {
+                if (p_x < 0) {
+                    p_x = 0;
+                }
+                if (p_x >= _cfg_width) {
+                    p_x = _cfg_width - 1;
+                }
             }
             display.setColor(p_x, p.pos.y, colors[p.value]);
         }
@@ -100,13 +110,15 @@ void Piece::renderShape(std::vector<PiecePixel>& pixels) const {
 
         int32_t p_x = p.pos.x + PiecesCenters[type].x + position.x;
 
-        while (p_x < 0) {
-            p_x += _cfg_width;
-        }
-        while (p_x >= _cfg_width) {
-            p_x -= _cfg_width;
-        }
+        if (_cfg_overflow_enable == true) {
 
-        p.pos = Vec2 { p_x , p.pos.y + PiecesCenters[type].y + position.y };
+            while (p_x < 0) {
+                p_x += _cfg_width;
+            }
+            while (p_x >= _cfg_width) {
+                p_x -= _cfg_width;
+            }
+        }
+        p.pos = Vec2 { p_x, p.pos.y + PiecesCenters[type].y + position.y };
     }
 }

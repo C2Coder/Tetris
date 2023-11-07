@@ -26,7 +26,7 @@ public:
     void confirm();
     void undo();
 
-    void draw(int view_offset);
+    void draw();
 
     bool getInteract() const { return lowerLast; }
 
