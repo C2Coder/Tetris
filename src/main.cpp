@@ -4,10 +4,10 @@
 #include <memory>
 
 #include "colors.hpp"
+#include "global_vars.hpp"
 #include "map.hpp"
 #include "piece.hpp"
 #include "tetris_config.hpp"
-#include "global_vars.hpp"
 
 Map map;
 std::unique_ptr<Piece> activePiece; // needs the ability to be null
@@ -17,7 +17,7 @@ extern std::array<Rgb, 10> number_colors;
 
 long current_millis = 0;
 long prev_millis = 0;
-long interval = 750; // 750
+long interval = 1000; // 750
 
 bool GameOverBool = false;
 bool ShouldRunGame = true;
@@ -229,6 +229,7 @@ void logicMain() {
         GameOverBool = false;
 
         player_score = 0;
+        display.clear();
         displayScore();
 
         map.clearMap();

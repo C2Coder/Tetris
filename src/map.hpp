@@ -21,7 +21,6 @@ public:
                 if (placedPixels[x][y] != 0) {
                     int p_x = x + view_offset;
                     if (_cfg_overflow_enable == true || _cfg_scroll_enable == true) {
-
                         while (p_x < 0) {
                             p_x += _cfg_width;
                         }
@@ -47,7 +46,6 @@ public:
         piece.getShape(pixels);
 
         for (auto& p : pixels) {
-
             placedPixels[p.pos.x][p.pos.y] = p.value;
         }
     }
